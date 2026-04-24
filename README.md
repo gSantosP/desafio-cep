@@ -9,7 +9,7 @@ OpenAPI/Swagger, endpoints de observabilidade (Actuator) e pipeline de CI no
 GitHub Actions.
 
 <p align="center">
-  <img src="docs/arquitetura-hexagonal_cep.svg" alt="Arquitetura Hexagonal do projeto" width="640"/>
+  <img src="docs/arquitetura_hexagonal_cep.svg" alt="Arquitetura Hexagonal do projeto" width="640"/>
 </p>
 
 Três camadas concêntricas com dependências apontando sempre **para dentro**:
