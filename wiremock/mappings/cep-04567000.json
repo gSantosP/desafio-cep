@@ -1,0 +1,24 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/ws/04567000/json/"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json; charset=utf-8"
+    },
+    "jsonBody": {
+      "cep": "04567-000",
+      "logradouro": "Avenida das Nacoes Unidas",
+      "complemento": "",
+      "bairro": "Vila Olimpia",
+      "localidade": "Sao Paulo",
+      "uf": "SP",
+      "ibge": "3550308",
+      "gia": "1004",
+      "ddd": "11",
+      "siafi": "7107"
+    }
+  }
+}

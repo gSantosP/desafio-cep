@@ -1,0 +1,24 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/ws/22070011/json/"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json; charset=utf-8"
+    },
+    "jsonBody": {
+      "cep": "22070-011",
+      "logradouro": "Avenida Atlantica",
+      "complemento": "de 1702 a 3298 - lado par",
+      "bairro": "Copacabana",
+      "localidade": "Rio de Janeiro",
+      "uf": "RJ",
+      "ibge": "3304557",
+      "gia": "",
+      "ddd": "21",
+      "siafi": "6001"
+    }
+  }
+}
