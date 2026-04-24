@@ -8,6 +8,14 @@ Organizada em **Arquitetura Hexagonal (Ports & Adapters)**, com documentação
 OpenAPI/Swagger, endpoints de observabilidade (Actuator) e pipeline de CI no
 GitHub Actions.
 
+<p align="center">
+  <img src="docs/arquitetura-hexagonal.svg" alt="Arquitetura Hexagonal do projeto" width="640"/>
+</p>
+
+Três camadas concêntricas com dependências apontando sempre **para dentro**:
+o domínio no núcleo define as *portas* (interfaces) que os *adaptadores* da
+infraestrutura implementam. Detalhes em [`docs/architecture.md`](docs/architecture.md).
+
 ## Stack
 
 - **Java 17** · Spring Boot 3.2 · Spring Data JPA · Spring Boot Actuator
