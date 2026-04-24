@@ -26,13 +26,37 @@ infraestrutura implementam. Detalhes em [`docs/architecture.md`](docs/architectu
 - JUnit 5 · Mockito · AssertJ
 - **GitHub Actions** (CI/CD)
 
+## Pré-requisitos
+
+Para executar o projeto completo, você precisa de:
+
+- **Docker Desktop** (Windows/macOS) ou **Docker Engine + Docker Compose** (Linux), versão 20.10+
+- Docker Desktop deve estar **em execução** antes de rodar qualquer comando (ícone da baleia ativo na bandeja)
+
+Para verificar:
+
+```bash
+docker --version
+docker compose version
+```
+
+Se ainda não tiver o Docker instalado, baixe em https://www.docker.com/products/docker-desktop/.
+
+Não é necessário ter Java, Maven, PostgreSQL ou WireMock instalados localmente —
+tudo roda dentro dos containers. (Há também um modo alternativo sem Docker para
+o app, descrito mais abaixo.)
+
 ## Como executar (modo Docker — recomendado)
 
-Requer apenas Docker. Um único comando sobe tudo:
+Com o Docker Desktop em execução, dentro da pasta do projeto:
 
 ```bash
 docker compose up --build
 ```
+
+O primeiro `--build` demora alguns minutos na primeira vez (baixa imagens do
+Maven, JRE, PostgreSQL e WireMock). Nas execuções seguintes é quase instantâneo
+por conta do cache.
 
 Três containers sobem juntos:
 
@@ -42,30 +66,62 @@ Três containers sobem juntos:
 | `wiremock` | 8081       | Mock da API de CEP                 |
 | `postgres` | 5432       | Banco relacional dos logs          |
 
-Credenciais do Postgres: user `postgres` / pass `postgres` / db `cepdb`.
+Credenciais do Postgres: user `postgres` / senha `postgres` / database `cepdb`.
 
-Para parar e limpar os volumes:
+A aplicação está pronta para uso quando aparecer no log:
+
+```
+cep-app | Started CepApplication in X.XXX seconds
+```
+
+**Pontos de entrada após subida:**
+- http://localhost:8080/swagger-ui.html — documentação interativa
+- http://localhost:8080/actuator/health — healthcheck
+- http://localhost:8080/api/cep/01310-100 — consulta de exemplo
+
+Para parar e limpar tudo (incluindo volumes do banco):
 
 ```bash
 docker compose down -v
 ```
 
-## Como executar (modo local — sem Docker para o app)
+### Script de demonstração
 
-Perfil padrão usa **H2 em memória** — nenhum banco precisa ser instalado.
-Só o WireMock precisa estar rodando:
+Em outro terminal, com a aplicação rodando:
 
 ```bash
-# 1) Subir apenas o WireMock
+./demo.sh
+```
+
+Executa os seis cenários (sucesso, CEP inválido, CEP inexistente, listagem
+de logs, busca por CEP específico) e imprime as respostas.
+
+## Como executar (modo local — sem Docker para o app)
+
+Alternativa se quiser rodar a aplicação fora de container, usando **H2 em
+memória** no lugar do Postgres. Útil em máquinas com Docker limitado ou para
+debug rápido no IDE.
+
+Requer Java 17 e Maven localmente. O WireMock ainda precisa rodar como
+container (ou pode ser substituído por Mockoon/MockServer):
+
+```bash
+# 1) Subir apenas o WireMock em container
 docker run -d --rm --name cep-wiremock -p 8081:8080 \
   -v "$(pwd)/wiremock/mappings:/home/wiremock/mappings:ro" \
   wiremock/wiremock:3.6.0
 
-# 2) Subir a aplicação
+# 2) Subir a aplicação (perfil default usa H2)
 ./mvnw spring-boot:run
 ```
 
-Console do H2: http://localhost:8080/h2-console (JDBC `jdbc:h2:mem:cepdb`, user `sa`, sem senha).
+Console do H2 para inspecionar a tabela de logs:
+- URL: http://localhost:8080/h2-console
+- JDBC URL: `jdbc:h2:mem:cepdb`
+- User: `sa` / senha: (vazia)
+
+Essa flexibilidade (dois perfis, duas implementações de banco, mesmo código)
+é demonstração prática do DIP do SOLID aplicado via arquitetura hexagonal.
 
 ## Endpoints
 
@@ -83,7 +139,7 @@ Console do H2: http://localhost:8080/h2-console (JDBC `jdbc:h2:mem:cepdb`, user 
 ### Exemplos com curl
 
 ```bash
-# CEP válido mocado
+# CEP válido mocado -> 200
 curl http://localhost:8080/api/cep/01310-100
 
 # CEP com formato inválido -> 400
@@ -92,11 +148,9 @@ curl -i http://localhost:8080/api/cep/abc
 # CEP inexistente -> 404
 curl -i http://localhost:8080/api/cep/99999999
 
-# Listagem dos logs persistidos
+# Listagem dos logs persistidos -> 200
 curl http://localhost:8080/api/cep/logs
 ```
-
-Todo o script de demonstração dos cenários está em `./demo.sh`.
 
 ## Arquitetura Hexagonal (Ports & Adapters)
 
@@ -135,9 +189,9 @@ src/main/java/com/example/cep/
 - Trocar de JPA para MongoDB é trocar o adaptador de persistência — o caso de uso continua idêntico.
 - Testes unitários do caso de uso **não sobem Spring**: substituem as portas por mocks do Mockito (ver `ConsultarCepUseCaseTest`).
 
-Ver também [`docs/architecture.md`](docs/architecture.md) (diagrama) e
-[`docs/SOLID.md`](docs/SOLID.md) (mapeamento dos 5 princípios para classes
-concretas).
+Ver também [`docs/architecture.md`](docs/architecture.md) (diagrama de fluxo
+runtime) e [`docs/SOLID.md`](docs/SOLID.md) (mapeamento dos cinco princípios
+para classes concretas).
 
 ## Documentação OpenAPI (Swagger)
 
@@ -173,9 +227,9 @@ Qualquer outro CEP válido (8 dígitos) cai no mapeamento *catch-all* e retorna
 ./mvnw test
 ```
 
-O `ConsultarCepUseCaseTest` cobre os três fluxos principais (sucesso, CEP
-inválido, CEP não encontrado, erro do provedor, sanitização de máscara) sem
-subir contexto Spring — é o ganho prático da arquitetura hexagonal.
+O `ConsultarCepUseCaseTest` cobre os principais fluxos (sucesso, CEP inválido,
+CEP não encontrado, erro do provedor, sanitização de máscara) sem subir
+contexto Spring — é o ganho prático da arquitetura hexagonal.
 
 ## CI/CD
 
@@ -214,5 +268,49 @@ cep:
     base-url: https://viacep.com.br
 ```
 
-Essa flexibilidade é justamente o ganho prático de aplicar o **DIP** do SOLID:
-o serviço depende da interface, não da implementação concreta.
+## Troubleshooting
+
+### "Cannot connect to the Docker daemon"
+Docker Desktop não está em execução. Abra o aplicativo e espere o ícone da
+baleia ficar verde antes de rodar o `docker compose`.
+
+### "port is already allocated" (8080, 8081 ou 5432)
+Alguma outra aplicação já usa a porta. Soluções:
+
+1. **Descobrir quem usa a porta** (Windows PowerShell/Git Bash):
+   ```bash
+   netstat -ano | findstr :8080
+   ```
+   A última coluna mostra o PID. Finalize com `taskkill /F /PID <PID>` se for
+   seguro (ou feche a aplicação).
+
+2. **Derrubar containers antigos:**
+   ```bash
+   docker ps                                     # ver containers ativos
+   docker stop cep-app cep-wiremock cep-postgres # parar os do projeto
+   ```
+
+3. **Usar uma porta diferente:** edite o `docker-compose.yml` e troque só
+   o lado esquerdo do mapeamento. Exemplo para usar 8090 em vez de 8080:
+   ```yaml
+   app:
+     ports:
+       - "8090:8080"
+   ```
+   Depois rode os testes apontando para a porta nova:
+   ```bash
+   BASE_URL=http://localhost:8090 ./demo.sh
+   ```
+
+### Build Docker falha ao baixar dependências
+Primeira execução precisa de internet para baixar imagens e dependências Maven.
+Se estiver atrás de proxy corporativo, configure o Docker Desktop em
+Settings → Resources → Proxies.
+
+### A aplicação sobe mas `/api/cep/...` retorna 502
+O WireMock pode não ter terminado de subir ainda, ou os mapeamentos não foram
+carregados. Verifique:
+```bash
+docker logs cep-wiremock        # deve mostrar os mappings carregados
+curl http://localhost:8081/ws/01310100/json/   # deve retornar JSON do CEP
+```
